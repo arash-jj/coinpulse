@@ -16,7 +16,6 @@ const TrendingCoins = async () => {
             return (
                 <Link href={`/coins/${item.id}`}>
                 <Image src={item.large} alt={item.name} width={36} height={36} />
-                <span>{item.name}</span>
                 <p>{item.name}</p>
                 </Link>
             )
@@ -29,7 +28,7 @@ const TrendingCoins = async () => {
             const isTrendingUp = item.data.price_change_percentage_24h.usd > 0
             return (
                 <div className={cn('price-change', isTrendingUp ? 'text-green-500' : 'text-red-500')}>
-                <p>
+                <p className="flex items-center gap-1">
                     {isTrendingUp ? (
                     <TrendingUp width={16} height={16} />
                     ) : (
