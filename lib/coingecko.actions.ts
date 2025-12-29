@@ -33,3 +33,66 @@ export async function fetcher<T>(
     }
     return response.json();
 }
+export async function getPools(
+    id: string,
+    network?: string | null,
+    contractAddress?: string | null
+    ): Promise<PoolData> {
+    const fallback: PoolData = {
+        id: "",
+        address: "",
+        name: "",
+        network: "",
+    };
+    if (network && contractAddress) {
+        const poolData = await fetcher<{ data: PoolData[] }>(
+        `/onchain/networks/${network}/tokens/${contractAddress}/pools`
+        );
+        return poolData.data?.[0] ?? fallback;
+    }
+    try {
+        const poolData = await fetcher<{ data: PoolData[] }>(
+        "/onchain/search/pools",
+        { query: id }
+        );
+        return poolData.data?.[0] ?? fallback;
+    } catch {
+        return fallback;
+    }
+};
+
+export async function searchCoins(query: string): Promise<SearchCoin[]> {
+    if (!query) return [];
+    const searchRes = await fetch(
+        `${BASE_URL}/search?query=${encodeURIComponent(query)}`,
+        { next: { revalidate: 60 } }
+    );
+    if (!searchRes.ok) {
+        throw new Error('Failed to search coins');
+    }
+    const searchData = await searchRes.json();
+    const coinIds: string[] = searchData.coins
+        ?.slice(0, 10)
+        .map((coin: any) => coin.id);
+    if (!coinIds.length) return [];
+    const marketsRes = await fetch(
+        `${BASE_URL}/coins/markets?vs_currency=usd&ids=${coinIds.join(
+        ','
+        )}&price_change_percentage=24h`,
+        { next: { revalidate: 60 } }
+    );
+    if (!marketsRes.ok) {
+        throw new Error('Failed to fetch coin markets');
+    }
+    const marketsData = await marketsRes.json();
+    return marketsData.map((coin: any) => ({
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol,
+        thumb: coin.image,
+        data: {
+        price_change_percentage_24h:
+            coin.price_change_percentage_24h ?? 0,
+        },
+    }));
+}
